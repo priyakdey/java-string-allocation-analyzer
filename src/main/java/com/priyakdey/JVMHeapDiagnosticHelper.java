@@ -57,55 +57,55 @@ public class JVMHeapDiagnosticHelper {
         postProcessBuilder = processBuilder("post.hist");
 
         // setup hotspot bean for head dump
-        Path path = Path.of(STATS_DIR, this.className, "pre.hprof");
-        deleteFileIfExists(path);
-        preAllocHprofFilename = path.toString();
-        deleteFileIfExists(path);
+        Path prePath = Path.of(STATS_DIR, this.className, "pre.hprof");
+        deleteFileIfExists(prePath);
+        preAllocHprofFilename = prePath.toString();
 
-
-        path = Path.of(STATS_DIR, this.className, "post.hprof");
-        deleteFileIfExists(path);
-        postAllocHprofFilename = path.toString();
-        deleteFileIfExists(path);
+        Path postPath = Path.of(STATS_DIR, this.className, "post.hprof");
+        deleteFileIfExists(postPath);
+        postAllocHprofFilename = postPath.toString();
 
         mxBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
     }
 
     /**
      * Takes a histogram dump before allocation.
+     *
+     * @throws IOException          if an I/O error occurs while starting the process.
+     * @throws InterruptedException if the current thread is interrupted while waiting for the process to complete.
      */
-    public void takePreAllocHistDump() {
-        executeProcess(preProcessBuilder, "pre.hist");
+    public void takePreAllocHistDump() throws IOException, InterruptedException {
+        preProcessBuilder.start().waitFor();
     }
 
     /**
      * Takes a histogram dump after allocation.
+     *
+     * @throws IOException          if an I/O error occurs while starting the process.
+     * @throws InterruptedException if the current thread is interrupted while waiting for the process to complete.
      */
-    public void takePostAllocHistDump() {
-        executeProcess(postProcessBuilder, "post.hist");
+    public void takePostAllocHistDump() throws IOException, InterruptedException {
+        postProcessBuilder.start().waitFor();
     }
 
     /**
      * Takes a heap dump before allocation.
+     *
+     * @throws IOException if an I/O error occurs while taking the heap dump.
      */
-    public void takePreAllocHeapDump() {
-        try {
-            mxBean.dumpHeap(preAllocHprofFilename, true);
-        } catch (IOException e) {
-            die("ERROR: Could not take pre-allocation heap dump: %s%n", e.getMessage());
-        }
+    public void takePreAllocHeapDump() throws IOException {
+        mxBean.dumpHeap(preAllocHprofFilename, true);
     }
 
     /**
      * Takes a heap dump after allocation.
+     *
+     * @throws IOException if an I/O error occurs while taking the heap dump.
      */
-    public void takePostAllocHeapDump() {
-        try {
-            mxBean.dumpHeap(postAllocHprofFilename, true);
-        } catch (IOException e) {
-            die("ERROR: Could not take pre-allocation heap dump: %s%n", e.getMessage());
-        }
+    public void takePostAllocHeapDump() throws IOException {
+        mxBean.dumpHeap(postAllocHprofFilename, true);
     }
+
 
 
 
@@ -142,26 +142,6 @@ public class JVMHeapDiagnosticHelper {
         }
     }
 
-    /**
-     * Executes a {@link ProcessBuilder} and handles errors.
-     *
-     * @param processBuilder The {@link ProcessBuilder} to execute.
-     * @param phase          The phase of the allocation (pre or post).
-     */
-    private void executeProcess(ProcessBuilder processBuilder, String phase) {
-        try {
-            Process process = processBuilder.start();
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                die("ERROR: %s jcmd command failed with exit code: %d%n", phase, exitCode);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            die("ERROR: %s jcmd process wasinterrupted: %s%n", phase, e.getMessage());
-        } catch (IOException e) {
-            die("ERROR: Could not start %s jcmd process: %s%n", phase, e.getMessage());
-        }
-    }
 
     /**
      * Creates a {@link ProcessBuilder} for the given filename to take a histogram dump.
