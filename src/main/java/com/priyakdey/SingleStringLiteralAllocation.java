@@ -14,9 +14,12 @@ public class SingleStringLiteralAllocation {
 
         String s1 = "Hello, World";
 
+        // pre-allocate everything for next steps.
+        // nothing should be allocated post string instantiation, for easy analysis
+        // of the dump.
+
         jvmHeapDiagnosticHelper.takePostAllocHistDump();
         jvmHeapDiagnosticHelper.takePostAllocHeapDump();
-
     }
 
 }
